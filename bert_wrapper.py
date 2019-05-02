@@ -71,7 +71,7 @@ class BertWrapper:
         self._with_cls = 1 if with_cls else 0
         self._batch_size = batch_size
 
-        model_path = "/net/projects/bert/models/{}-{}-{}".format(language, size, casing)
+        model_path = "models/{}-{}-{}".format(language, size, casing)
         if not os.path.exists(model_path):
             raise ValueError("The requested Bert model combination {}-{}-{} does not exist".format(language, size, casing))
 
