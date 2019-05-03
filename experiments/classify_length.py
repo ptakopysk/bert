@@ -13,8 +13,10 @@ from sklearn import linear_model
 
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s %(message)s')
 
+logger = logging.getLogger('RUR')
+logger.setLevel(logging.INFO)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -30,11 +32,12 @@ if __name__ == "__main__":
     args.layer_indices = list(map(int, args.layer_indices.split(",")))
 
     # Load TXT file
+    logger.info("Load TXT file")
     sentences = []
     with open(args.input_txt, mode="r", encoding="utf-8") as input_txt:
         for line in input_txt:
             sentences.append(line.split())
-    logging.info("Loaded TXT file with {} sentences and {} words.".format(len(sentences), sum(map(len, sentences))))
+    logger.info("Loaded TXT file with {} sentences and {} words.".format(len(sentences), sum(map(len, sentences))))
     sent_lens = [len(s) for s in sentences]
 
     # Get sentence embeddings
@@ -42,17 +45,20 @@ if __name__ == "__main__":
                                     with_cls=True, threads=args.threads, batch_size=args.batch_size)
     clss = []
     for i, embeddings in enumerate(bert.bert_embeddings(sentences)):
-        if (i + 1) % 100 == 0: logging.info("Processed {}/{} sentences.".format(i + 1, len(sentences)))
+        if (i + 1) % 100 == 0: logger.info("Processed {}/{} sentences.".format(i + 1, len(sentences)))
         clss.append(embeddings.tolist()[0])
-    logging.info("All embeddings computed.")
+    logger.info("All embeddings computed.")
 
     # Train and test the classifier
-    clss_train, clss_test, sent_lens_train, sent_lens_test = train_test_split(clss, sent_lens, test=0.1)
+    clss_train, clss_test, sent_lens_train, sent_lens_test = train_test_split(clss, sent_lens, test_size=0.1)
     regr = linear_model.LinearRegression()
     regr.fit(clss_train, sent_lens_train)
-    logging.info("Model trained.")
+    logger.info("Model trained.")
     train_score = regr.score(clss_train, sent_lens_train)
     test_score = regr.score(clss_test, sent_lens_test)
     print('Train score:', train_score)
     print('Test score:', test_score)
+    preds = regr.predict(clss_test)
+    for pred, true in zip(preds, sent_lens_test):
+        print('True:', true, 'Predicted:', pred, 'Error:', abs(pred-true))
 
